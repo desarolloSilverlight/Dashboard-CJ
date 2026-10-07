@@ -1,5 +1,7 @@
 # Dashboard CJ Dropshipping
 
+E-commerce conectado al API de CJ Dropshipping.
+
 Next.js 15 + BFF para la [Product API](https://developers.cjdropshipping.com/en/api/api2/api/product.html) de CJ.
 
 ## Configuración
