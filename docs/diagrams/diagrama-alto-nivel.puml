@@ -1,0 +1,83 @@
+@startuml diagrama_alto_nivel_cj
+' Diagrama de componentes / despliegue (estilo UML) — Tienda CJ + AWS
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam nodesep 40
+skinparam ranksep 35
+
+title Diagrama alto nivel — Tienda B2C + Panel merchant (CJ API 2.0 / AWS)
+
+actor "Comprador final" as Shopper
+actor "Dueño de tienda\n(operadores)" as Merchant
+
+rectangle "Pasarela B2C\n(Stripe / MP / Wompi)" as PSP #LightYellow
+
+package "Amazon Web Services" as AWS #AliceBlue {
+  together {
+    component "CloudFront\n(opcional)" as CF
+    component "ALB o\nAmplify Hosting" as ALB
+  }
+  component "Next.js 15\nApp Router + BFF\n(EC2 Docker | Amplify SSR)" as Next #LightGreen
+  component "Secrets Manager\n(CJ_API_KEY)" as SM
+  database "ElastiCache Redis\nsesiones · QPS · caché" as Redis
+  database "RDS PostgreSQL\nusuarios · carritos · pedidos" as DB
+  queue "SQS\nwebhooks CJ" as SQS
+  component "Webhook ingress\nLambda / Route\n/api/webhooks/cj" as WH
+  component "Worker / Cron\nsync pedidos" as Jobs
+}
+
+package "CJ Dropshipping API 2.0" as CJ #MistyRose {
+  component "authentication" as CJAuth
+  component "setting" as CJSet
+  component "product" as CJProd
+  component "warehouse" as CJWh
+  component "shopping" as CJShop
+  component "logistic" as CJLog
+  component "webhook" as CJHook
+  component "disputes (opc.)" as CJDisp
+}
+
+Shopper -down-> CF : HTTPS\n tienda · checkout · tracking
+Merchant -down-> CF : HTTPS\n panel · KPIs
+CF -down-> ALB
+ALB -down-> Next : SSR + API
+
+Next -down-> SM
+Next -down-> Redis
+Next -down-> DB
+Next -right-> PSP : checkout
+PSP -down-> WH : webhook pago
+
+WH -down-> SQS
+SQS -down-> Jobs
+Jobs -up-> Next
+
+Next -down-> CJAuth : BFF + rate limit QPS
+Next -down-> CJSet
+Next -down-> CJProd
+Next -down-> CJWh
+Next -down-> CJShop
+Next -down-> CJLog
+Next -down-> CJHook
+Next -down-> CJDisp
+
+CJHook -up-> WH : POST order · logistics · stock
+
+legend right
+  |= Color |= Significado |
+  | <#LightGreen> | MVP existente (BFF Next.js) |
+  | Líneas sólidas | Flujos objetivo producción |
+  | CJ API key | Solo servidor (Secrets Manager) |
+endlegend
+
+note bottom of Next
+  **Endpoints MVP:** getCategory, listV2, query,
+  stock/queryByPid, freightCalculate*
+  **Futuro:** createOrderV3, payBalanceV2,
+  trackInfo, webhook/set
+end note
+
+@enduml

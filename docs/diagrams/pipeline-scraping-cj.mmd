@@ -1,0 +1,24 @@
+flowchart TB
+  subgraph Apify["Apify"]
+    T["Temu Actor"]
+    S["Shein Actor"]
+  end
+
+  subgraph CJMatch["Match CJ"]
+    KW["listV2 + query\n(volumen)"]
+    IMG["queryProductsByImage\n(1000 pts)"]
+  end
+
+  subgraph App["Dashboard / Tienda"]
+    INV["Inventario CJ\nquery + stock"]
+    DPL["DeepL + caché"]
+    SHOP["Catálogo + venta"]
+  end
+
+  T --> KW
+  S --> KW
+  T --> IMG
+  S --> IMG
+  KW --> INV
+  IMG --> INV
+  INV --> DPL --> SHOP

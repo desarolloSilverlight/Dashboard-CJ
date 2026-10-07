@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --color-cj-bg: #0c0f14;
+  --color-cj-panel: #141922;
+  --color-cj-border: #252d3a;
+}
+
+body {
+  @apply bg-[var(--color-cj-bg)] text-slate-100 font-sans antialiased;
+}
+
+.select-field {
+  @apply w-full rounded-lg border border-[var(--color-cj-border)] bg-[var(--color-cj-bg)] px-3 py-2 text-sm outline-none focus:border-blue-500;
+}
+
+.product-description img {
+  @apply my-4 max-w-full rounded-lg;
+}
+.product-description table {
+  @apply my-4 w-full border-collapse text-xs;
+}
+.product-description td,
+.product-description th {
+  @apply border border-[var(--color-cj-border)] p-2;
+}

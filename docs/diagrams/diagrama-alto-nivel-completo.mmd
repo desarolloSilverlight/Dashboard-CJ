@@ -1,0 +1,49 @@
+flowchart TB
+  subgraph Actores["Actores"]
+    Shopper["Comprador final"]
+    Merchant["Dueño de tienda"]
+  end
+
+  subgraph AWS["Amazon Web Services"]
+    CF["CloudFront / CDN"]
+    ALB["ALB o Amplify"]
+    Next["Next.js 15 BFF"]
+    SM["Secrets Manager"]
+    Redis["Redis"]
+    DB["RDS PostgreSQL"]
+    SQS["SQS"]
+    WH["Webhooks"]
+    Jobs["Workers"]
+  end
+
+  PSP["Pasarela B2C"]
+
+  subgraph CJ["CJ API 2.0"]
+    CJAuth["authentication"]
+    CJSet["setting"]
+    CJProd["product"]
+    CJWh["warehouse"]
+    CJShop["shopping"]
+    CJLog["logistic"]
+    CJHook["webhook"]
+    CJDisp["disputes"]
+  end
+
+  Shopper --> CF
+  Merchant --> CF
+  CF --> ALB --> Next
+  Next --> SM
+  Next --> Redis
+  Next --> DB
+  Next --> PSP
+  PSP --> WH
+  WH --> SQS --> Jobs --> Next
+  Next --> CJAuth
+  Next --> CJSet
+  Next --> CJProd
+  Next --> CJWh
+  Next --> CJShop
+  Next --> CJLog
+  Next --> CJHook
+  Next --> CJDisp
+  CJHook --> WH
