@@ -2,7 +2,7 @@ import { buildListV2Query } from "../list-v2-query";
 import type { IProductRepository, FetchCatalogResult } from "../repositories/product.repository";
 import type { CatalogLoadProgress, ListV2Filters } from "../types";
 
-const MAX_BY_CATEGORY = 500;
+const MAX_BY_CATEGORY = 100;
 
 export type CategorySearchParams = {
   categoryId?: string;

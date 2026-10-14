@@ -3,6 +3,7 @@ import { DM_Sans, JetBrains_Mono } from "next/font/google";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { AuthStatusProvider } from "@/providers/auth-status-provider";
 import { CatalogCacheProvider } from "@/providers/catalog-cache-provider";
+import { ThemeProvider } from "@/providers/theme-provider";
 import "./globals.css";
 
 const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm" });
@@ -17,13 +18,15 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="es" className={`${dmSans.variable} ${jetbrains.variable}`}>
+    <html lang="es" data-theme="light" className={`${dmSans.variable} ${jetbrains.variable}`}>
       <body>
-        <AuthStatusProvider>
-          <CatalogCacheProvider>
-            <DashboardShell>{children}</DashboardShell>
-          </CatalogCacheProvider>
-        </AuthStatusProvider>
+        <ThemeProvider>
+          <AuthStatusProvider>
+            <CatalogCacheProvider>
+              <DashboardShell>{children}</DashboardShell>
+            </CatalogCacheProvider>
+          </AuthStatusProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

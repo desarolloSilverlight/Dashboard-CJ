@@ -49,7 +49,7 @@ export function ExplorerView() {
     <div className="mx-auto grid max-w-[1600px] gap-4 p-4 lg:grid-cols-2">
       <div className="rounded-xl border border-[var(--color-cj-border)] bg-[var(--color-cj-panel)] p-4">
         <h2 className="mb-3 text-sm font-semibold">Explorador (Product API)</h2>
-        <label className="mb-2 block text-[11px] text-slate-500">Endpoint</label>
+        <label className="mb-2 block text-[11px] text-[var(--color-cj-faint)]">Endpoint</label>
         <select
           value={endpointId}
           onChange={(e) => {
@@ -64,12 +64,12 @@ export function ExplorerView() {
             </option>
           ))}
         </select>
-        <p className="mb-3 font-mono text-xs text-slate-500">
+        <p className="mb-3 font-mono text-xs text-[var(--color-cj-faint)]">
           BFF: /api/cj{ep.path}
         </p>
         {ep.params.map((p) => (
           <label key={p} className="mb-2 block">
-            <span className="mb-1 block text-[11px] text-slate-500">{p}</span>
+            <span className="mb-1 block text-[11px] text-[var(--color-cj-faint)]">{p}</span>
             <Input
               className="font-mono text-xs"
               value={paramValues[p] ?? ""}
@@ -84,8 +84,8 @@ export function ExplorerView() {
         </Button>
       </div>
       <div className="min-h-[480px] rounded-xl border border-[var(--color-cj-border)] bg-[var(--color-cj-panel)] p-4">
-        <h2 className="mb-2 text-sm text-slate-400">Respuesta</h2>
-        <pre className="h-[440px] overflow-auto rounded-lg bg-black/40 p-3 font-mono text-xs text-slate-300">
+        <h2 className="mb-2 text-sm text-[var(--color-cj-muted)]">Respuesta</h2>
+        <pre className="h-[440px] overflow-auto rounded-lg bg-[var(--color-cj-bg)] p-3 font-mono text-xs text-[var(--color-cj-text)]">
           {response || "—"}
         </pre>
       </div>

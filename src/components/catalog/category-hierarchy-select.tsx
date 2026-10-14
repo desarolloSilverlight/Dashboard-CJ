@@ -31,7 +31,7 @@ export function CategoryHierarchySelect({
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       <label className="block">
-        <span className="mb-1 block text-[11px] text-slate-500">
+        <span className="mb-1 block text-[11px] text-[var(--color-cj-faint)]">
           Categoría padre
         </span>
         <select
@@ -53,7 +53,7 @@ export function CategoryHierarchySelect({
       </label>
 
       <label className="block">
-        <span className="mb-1 block text-[11px] text-slate-500">
+        <span className="mb-1 block text-[11px] text-[var(--color-cj-faint)]">
           Subcategoría (opcional)
         </span>
         <select
@@ -69,7 +69,7 @@ export function CategoryHierarchySelect({
           ))}
         </select>
         {parentKey && (
-          <p className="mt-1 text-[10px] text-slate-600">
+          <p className="mt-1 text-[10px] text-[var(--color-cj-faint)]">
             Deja &quot;Toda la categoría padre&quot; para buscar en todas sus
             subcategorías.
           </p>

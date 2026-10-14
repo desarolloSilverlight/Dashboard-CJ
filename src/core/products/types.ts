@@ -16,6 +16,7 @@ export interface CjProductListItem {
   sellPrice?: string;
   nowPrice?: string;
   discountPrice?: string;
+  discountPriceRate?: string;
   listedNum?: number;
   categoryId?: string;
   threeCategoryName?: string;
@@ -24,6 +25,21 @@ export interface CjProductListItem {
   warehouseInventoryNum?: number;
   totalVerifiedInventory?: number;
   totalUnVerifiedInventory?: number;
+  addMarkStatus?: number;
+  isVideo?: number;
+  productType?: string;
+  supplierName?: string;
+  createAt?: number | string;
+  verifiedWarehouse?: number;
+  customization?: number;
+  isPersonalized?: number;
+  hasCECertification?: number;
+  deliveryCycle?: string;
+  directMinOrderNum?: string;
+  variantKeyEn?: string;
+  /** Solo si el listado pide enable_description. No es la galería del detalle. */
+  description?: string;
+  productImageSet?: string[] | string;
   [key: string]: unknown;
 }
 

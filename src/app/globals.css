@@ -3,17 +3,41 @@
 @theme {
   --font-sans: "DM Sans", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --color-cj-bg: #f4f6f8;
+  --color-cj-panel: #ffffff;
+  --color-cj-border: #e2e8f0;
+  --color-cj-text: #0f172a;
+  --color-cj-muted: #64748b;
+  --color-cj-faint: #94a3b8;
+  --color-cj-chip: #f1f5f9;
+  --color-cj-price: #047857;
+  --color-cj-accent: #1d4ed8;
+}
+
+html[data-theme="dark"] {
   --color-cj-bg: #0c0f14;
   --color-cj-panel: #141922;
   --color-cj-border: #252d3a;
+  --color-cj-text: #f1f5f9;
+  --color-cj-muted: #94a3b8;
+  --color-cj-faint: #64748b;
+  --color-cj-chip: rgba(255, 255, 255, 0.06);
+  --color-cj-price: #34d399;
+  --color-cj-accent: #93c5fd;
+  color-scheme: dark;
+}
+
+html[data-theme="light"],
+html:not([data-theme]) {
+  color-scheme: light;
 }
 
 body {
-  @apply bg-[var(--color-cj-bg)] text-slate-100 font-sans antialiased;
+  @apply bg-[var(--color-cj-bg)] text-[var(--color-cj-text)] font-sans antialiased;
 }
 
 .select-field {
-  @apply w-full rounded-lg border border-[var(--color-cj-border)] bg-[var(--color-cj-bg)] px-3 py-2 text-sm outline-none focus:border-blue-500;
+  @apply w-full rounded-lg border border-[var(--color-cj-border)] bg-[var(--color-cj-bg)] px-3 py-2 text-sm text-[var(--color-cj-text)] outline-none focus:border-blue-500;
 }
 
 .product-description img {

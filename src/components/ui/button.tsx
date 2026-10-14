@@ -6,8 +6,8 @@ type Variant = "primary" | "secondary" | "ghost";
 const variants: Record<Variant, string> = {
   primary: "bg-blue-600 hover:bg-blue-500 text-white",
   secondary:
-    "border border-[var(--color-cj-border)] bg-[var(--color-cj-panel)] hover:bg-white/5 text-slate-200",
-  ghost: "text-slate-400 hover:text-white hover:bg-white/5",
+    "border border-[var(--color-cj-border)] bg-[var(--color-cj-panel)] hover:bg-[var(--color-cj-chip)] text-[var(--color-cj-text)]",
+  ghost: "text-[var(--color-cj-muted)] hover:text-[var(--color-cj-text)] hover:bg-[var(--color-cj-chip)]",
 };
 
 export function Button({

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { toCardGallery } from "@/features/catalog/lib/card-gallery";
+import type { CjProductDetail } from "@/core/products/types";
 import { cjHttpClient } from "@/server/cj/cj-http-client";
 import { CJ_BATCH_DELAY_MS } from "@/server/cj/config";
 import { resolveCjToken } from "@/server/cj/resolve-token";
@@ -19,17 +21,20 @@ export async function POST(request: NextRequest) {
     pids = [],
     countryCode,
     features = ["enable_video", "enable_combine"],
+    view,
   } = body as {
     pids?: string[];
     countryCode?: string;
     features?: string[];
+    view?: string;
   };
 
   if (!Array.isArray(pids) || pids.length === 0) {
     return NextResponse.json({ message: "pids array required" }, { status: 400 });
   }
-  if (pids.length > 500) {
-    return NextResponse.json({ message: "Max 500 pids per batch" }, { status: 400 });
+  const max = view === "card" ? 20 : 500;
+  if (pids.length > max) {
+    return NextResponse.json({ message: `Max ${max} pids per batch` }, { status: 400 });
   }
 
   const results: unknown[] = [];
@@ -46,9 +51,12 @@ export async function POST(request: NextRequest) {
       query,
     });
 
-    const row = cjBody as { code?: number; data?: unknown };
-    if (row.code === 200) results.push(row.data);
-    else errors.push({ pid, ...cjBody });
+    const row = cjBody as { code?: number; data?: CjProductDetail };
+    if (row.code === 200 && row.data) {
+      results.push(
+        view === "card" ? toCardGallery(row.data, pid) : row.data,
+      );
+    } else errors.push({ pid, ...cjBody });
 
     if (i < pids.length - 1 && CJ_BATCH_DELAY_MS > 0) {
       await new Promise((r) => setTimeout(r, CJ_BATCH_DELAY_MS));

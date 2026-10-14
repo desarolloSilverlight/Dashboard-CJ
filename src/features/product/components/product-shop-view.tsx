@@ -121,7 +121,7 @@ export function ProductShopView({ pid }: Props) {
     <div className="mx-auto max-w-[1280px] px-4 pb-20 pt-2">
       <Link
         href="/"
-        className="mb-6 inline-flex items-center gap-2 text-sm text-slate-400 transition hover:text-white"
+        className="mb-6 inline-flex items-center gap-2 text-sm text-[var(--color-cj-muted)] transition hover:text-[var(--color-cj-text)]"
       >
         ← Volver al catálogo
       </Link>
@@ -170,7 +170,7 @@ export function ProductShopView({ pid }: Props) {
                 {detail.categoryName.replace(/,/g, " · ")}
               </p>
             )}
-            <h1 className="mt-2 text-2xl font-semibold leading-tight text-white sm:text-3xl">
+            <h1 className="mt-2 text-2xl font-semibold leading-tight text-[var(--color-cj-text)] sm:text-3xl">
               {detail.productNameEn}
             </h1>
             <p className="mt-2 font-mono text-xs text-slate-500">

@@ -5,6 +5,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "start": "next start",
     "lint": "next lint",
     "docs:facturacion": "node scripts/generate-facturacion-docx.mjs",
@@ -13,6 +17,7 @@
     "docs:plan": "node scripts/generate-plan-docx.mjs"
   },
   "dependencies": {
+    "@opennextjs/cloudflare": "^1.20.11",
     "clsx": "^2.1.1",
     "next": "^15.1.0",
     "react": "^19.0.0",
@@ -27,6 +32,7 @@
     "@types/react-dom": "^19.0.0",
     "docx": "^9.8.1",
     "tailwindcss": "^4.0.0",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "wrangler": "^4.151.0"
   }
 }
