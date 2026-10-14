@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { CjProductListItem } from "@/core/products/types";
-import type { CardGallery } from "../lib/card-gallery";
+import type { CjProductDetail, CjProductListItem } from "@/core/products/types";
+import { cjPublicGet, usesPublicCjKey } from "@/infrastructure/http/cj-public";
+import { toCardGallery, type CardGallery } from "../lib/card-gallery";
 
 export type GalleryStatus = "pending" | "loading" | "ready" | "error";
 
@@ -73,15 +74,30 @@ export function useCardGalleries(
         if (!batch.length) return;
         mark(batch, "loading");
         try {
-          const res = await fetch("/api/batch/product-query", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ pids: batch, view: "card" }),
-            signal: controller.signal,
-          });
-          const body = (await res.json()) as BatchResponse;
-          if (!res.ok) throw new Error(body.message ?? "No se pudo cargar el lote");
-          const rows = body.data ?? [];
+          let rows: CardGallery[];
+          if (usesPublicCjKey()) {
+            rows = [];
+            for (const pid of batch) {
+              if (cancelled || controller.signal.aborted) return;
+              const detail = await cjPublicGet<CjProductDetail>("/product/query", {
+                pid,
+                features: ["enable_video", "enable_combine"],
+              });
+              if (detail.code === 200 && detail.data) {
+                rows.push(toCardGallery(detail.data, pid));
+              }
+            }
+          } else {
+            const res = await fetch("/api/batch/product-query", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ pids: batch, view: "card" }),
+              signal: controller.signal,
+            });
+            const body = (await res.json()) as BatchResponse;
+            if (!res.ok) throw new Error(body.message ?? "No se pudo cargar el lote");
+            rows = body.data ?? [];
+          }
           const byId = new Map(rows.filter((row) => row.pid).map((row) => [row.pid, row]));
           if (!cancelled) {
             setGalleries((prev) => {

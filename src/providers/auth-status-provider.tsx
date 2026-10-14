@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { getPublicAccessToken, usesPublicCjKey } from "@/infrastructure/http/cj-public";
 
 export type AuthStatus = {
   configured: boolean;
@@ -36,6 +37,16 @@ const defaultStatus: AuthStatus = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 async function fetchStatus(): Promise<AuthStatus> {
+  if (usesPublicCjKey()) {
+    const token = await getPublicAccessToken();
+    return {
+      configured: true,
+      email: process.env.NEXT_PUBLIC_CJ_EMAIL?.trim() || null,
+      hasToken: true,
+      accessTokenExpiryDate: token.accessTokenExpiryDate,
+      openId: token.openId,
+    };
+  }
   const res = await fetch("/api/auth/status");
   return res.json();
 }
@@ -59,6 +70,17 @@ export function AuthStatusProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
     try {
+      if (usesPublicCjKey()) {
+        const token = await getPublicAccessToken(true);
+        setStatus({
+          configured: true,
+          email: process.env.NEXT_PUBLIC_CJ_EMAIL?.trim() || null,
+          hasToken: true,
+          accessTokenExpiryDate: token.accessTokenExpiryDate,
+          openId: token.openId,
+        });
+        return;
+      }
       const res = await fetch("/api/auth/refresh", { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message ?? "Error al renovar");

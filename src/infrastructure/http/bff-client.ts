@@ -1,4 +1,5 @@
 import type { CjApiResponse } from "@/core/products/types";
+import { cjPublicGet, cjPublicPost, usesPublicCjKey } from "@/infrastructure/http/cj-public";
 
 const TOKEN_HEADER = "CJ-Access-Token";
 
@@ -31,6 +32,7 @@ export class BffClient {
     path: string,
     query?: Record<string, unknown>,
   ): Promise<CjApiResponse<T>> {
+    if (usesPublicCjKey()) return cjPublicGet<T>(path, query);
     const res = await fetch(`/api/cj${path}${buildQuery(query ?? {})}`, {
       headers: this.headers(),
     });
@@ -38,6 +40,7 @@ export class BffClient {
   }
 
   async post<T>(path: string, body: unknown): Promise<CjApiResponse<T>> {
+    if (usesPublicCjKey()) return cjPublicPost<T>(path, body);
     const res = await fetch(`/api/cj${path}`, {
       method: "POST",
       headers: this.headers({ "Content-Type": "application/json" }),

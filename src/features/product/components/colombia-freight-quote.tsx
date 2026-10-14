@@ -6,6 +6,8 @@ import type {
   FreightQuoteResponse,
   FreightShippingOption,
 } from "@/core/logistics/types";
+import { usesPublicCjKey } from "@/infrastructure/http/cj-public";
+import { quoteColombiaInBrowser } from "@/infrastructure/logistics/quote-colombia-public";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -55,28 +57,35 @@ export function ColombiaFreightQuote({ product, variant }: Props) {
     setError(null);
     setQuote(null);
     try {
-      const res = await fetch("/api/logistic/quote-colombia", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          vid: variant!.vid,
-          variantSku: variant!.variantSku,
-          quantity,
-          unitPriceUsd: unitPriceUsd(variant, product),
-          startCountryCode: origin,
-          weightG: variantWeightGrams(variant, product),
-          wrapWeightG: variantWeightGrams(variant, product),
-          volumeCm3: variantVolumeCm3(variant),
-          productProps: productLogisticsProps(product),
-          city,
-          province,
-          zip,
-        }),
-      });
-      const data = (await res.json()) as FreightQuoteResponse & {
-        message?: string;
+      const vid = variant?.vid;
+      const variantSku = variant?.variantSku;
+      if (!vid || !variantSku) return;
+      const payload = {
+        vid,
+        variantSku,
+        quantity,
+        unitPriceUsd: unitPriceUsd(variant, product),
+        startCountryCode: origin,
+        weightG: variantWeightGrams(variant, product),
+        wrapWeightG: variantWeightGrams(variant, product),
+        volumeCm3: variantVolumeCm3(variant),
+        productProps: productLogisticsProps(product),
+        city,
+        province,
+        zip,
       };
-      if (!res.ok || !data.ok) {
+      const data = usesPublicCjKey()
+        ? await quoteColombiaInBrowser(payload)
+        : await fetch("/api/logistic/quote-colombia", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }).then(async (res) => {
+            const body = (await res.json()) as FreightQuoteResponse & { message?: string };
+            if (!res.ok) throw new Error(body.message ?? "No se pudo cotizar");
+            return body;
+          });
+      if (!data.ok) {
         throw new Error(data.message ?? "No se pudo cotizar");
       }
       setQuote(data);
