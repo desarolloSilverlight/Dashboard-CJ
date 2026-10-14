@@ -13,15 +13,6 @@ Next.js 15 + BFF para la [Product API](https://developers.cjdropshipping.com/en/
 
 El servidor obtiene el **access token** con `POST /authentication/getAccessToken`. Usa **Actualizar token** si expiró (o refresh automático).
 
-## Despliegue (Cloudflare)
-
-La app tiene rutas `/api`, así que no puede publicarse como sitio estático. Se despliega en Cloudflare con [OpenNext](https://opennext.js.org/cloudflare/get-started). En el panel está bajo **Workers & Pages** y la URL pública queda en `*.workers.dev`.
-
-1. Conecta este repositorio en Cloudflare, o en local ejecuta `npx wrangler login` y luego `npm run deploy`.
-2. Comando de build: `npx opennextjs-cloudflare build`.
-3. Variable secreta obligatoria: `CJ_API_KEY`. No subas `.env.local`.
-4. Opcional: `CJ_EMAIL`.
-
 ## Flujo catálogo
 
 1. Se cargan categorías (`GET /product/getCategory`) en un selector con buscador
