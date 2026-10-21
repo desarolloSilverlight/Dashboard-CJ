@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { toCardGallery } from "@/features/catalog/lib/card-gallery";
 import type { CjProductDetail } from "@/core/products/types";
 import { cjHttpClient } from "@/server/cj/cj-http-client";
+import { CjQuotaError } from "@/server/cj/points-budget";
 import { CJ_BATCH_DELAY_MS } from "@/server/cj/config";
 import { resolveCjToken } from "@/server/cj/resolve-token";
 
@@ -38,6 +39,7 @@ export async function POST(request: NextRequest) {
   }
 
   const results: unknown[] = [];
+  const details: CjProductDetail[] = [];
   const errors: unknown[] = [];
 
   for (let i = 0; i < pids.length; i++) {
@@ -45,17 +47,30 @@ export async function POST(request: NextRequest) {
     const query: Record<string, unknown> = { pid, features };
     if (countryCode) query.countryCode = countryCode;
 
-    const { body: cjBody } = await cjHttpClient.request("/product/query", {
-      method: "GET",
-      token,
-      query,
-    });
+    let cjBody: unknown;
+    try {
+      const response = await cjHttpClient.request("/product/query", {
+        method: "GET",
+        token,
+        query,
+      });
+      cjBody = response.body;
+    } catch (err) {
+      if (err instanceof CjQuotaError) {
+        errors.push({ pid, message: err.message });
+        break;
+      }
+      throw err;
+    }
 
     const row = cjBody as { code?: number; data?: CjProductDetail };
     if (row.code === 200 && row.data) {
-      results.push(
-        view === "card" ? toCardGallery(row.data, pid) : row.data,
-      );
+      if (view === "card") {
+        results.push(toCardGallery(row.data, pid));
+        details.push(row.data);
+      } else {
+        results.push(row.data);
+      }
     } else errors.push({ pid, ...cjBody });
 
     if (i < pids.length - 1 && CJ_BATCH_DELAY_MS > 0) {
@@ -68,6 +83,7 @@ export async function POST(request: NextRequest) {
     count: results.length,
     errors: errors.length,
     data: results,
+    details,
     errorDetails: errors.slice(0, 20),
   });
 }

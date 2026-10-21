@@ -10,9 +10,17 @@ import {
 } from "react";
 import { buildCatalogCacheKey } from "@/core/catalog/cache-key";
 import type { CategoryL1, CjProductListItem } from "@/core/products/types";
+import { readBrowserCache, writeBrowserCache } from "@/features/catalog/lib/browser-cache";
 
 const TTL_MS =
-  Number(process.env.NEXT_PUBLIC_CATALOG_CACHE_TTL_MS) || 30 * 60 * 1000;
+  Number(process.env.NEXT_PUBLIC_CATALOG_CACHE_TTL_MS) || 6 * 60 * 60 * 1000;
+const INDEX_KEY = "gazu:catalog-index";
+const LAST_KEY = "gazu:catalog-last";
+const CATEGORIES_KEY = "gazu:categories";
+
+function entryKey(cacheKey: string) {
+  return `gazu:catalog:${cacheKey}`;
+}
 
 export type CatalogCacheEntry = {
   cacheKey: string;
@@ -55,7 +63,11 @@ export function CatalogCacheProvider({ children }: { children: ReactNode }) {
     (parentKey: string, subKey: string, keyWord: string) => {
       if (!parentKey) return null;
       const cacheKey = buildCatalogCacheKey(parentKey, subKey, keyWord);
-      const entry = productsByKey.current.get(cacheKey);
+      let entry = productsByKey.current.get(cacheKey);
+      if (!entry) {
+        entry = readBrowserCache<CatalogCacheEntry>(entryKey(cacheKey)) ?? undefined;
+        if (entry) productsByKey.current.set(cacheKey, entry);
+      }
       if (!entry || !isFresh(entry.fetchedAt)) return null;
       return entry;
     },
@@ -63,9 +75,14 @@ export function CatalogCacheProvider({ children }: { children: ReactNode }) {
   );
 
   const getLastProductCache = useCallback(() => {
-    const key = lastCacheKey.current;
+    const key = lastCacheKey.current ?? readBrowserCache<string>(LAST_KEY);
+    if (key) lastCacheKey.current = key;
     if (!key) return null;
-    const entry = productsByKey.current.get(key);
+    let entry = productsByKey.current.get(key);
+    if (!entry) {
+      entry = readBrowserCache<CatalogCacheEntry>(entryKey(key)) ?? undefined;
+      if (entry) productsByKey.current.set(key, entry);
+    }
     if (!entry || !isFresh(entry.fetchedAt)) return null;
     return entry;
   }, []);
@@ -84,18 +101,30 @@ export function CatalogCacheProvider({ children }: { children: ReactNode }) {
       };
       productsByKey.current.set(cacheKey, full);
       lastCacheKey.current = cacheKey;
+      writeBrowserCache(entryKey(cacheKey), full);
+      writeBrowserCache(LAST_KEY, cacheKey);
+      const index = readBrowserCache<string[]>(INDEX_KEY) ?? [];
+      if (!index.includes(cacheKey)) {
+        writeBrowserCache(INDEX_KEY, [...index, cacheKey]);
+      }
     },
     [],
   );
 
   const getCategoriesCache = useCallback(() => {
-    const c = categoriesRef.current;
+    let c = categoriesRef.current;
+    if (!c) {
+      c = readBrowserCache<{ data: CategoryL1[]; fetchedAt: number }>(CATEGORIES_KEY);
+      if (c) categoriesRef.current = c;
+    }
     if (!c || !isFresh(c.fetchedAt)) return null;
     return c.data;
   }, []);
 
   const setCategoriesCache = useCallback((categories: CategoryL1[]) => {
-    categoriesRef.current = { data: categories, fetchedAt: Date.now() };
+    const next = { data: categories, fetchedAt: Date.now() };
+    categoriesRef.current = next;
+    writeBrowserCache(CATEGORIES_KEY, next);
   }, []);
 
   const value = useMemo(

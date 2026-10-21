@@ -31,6 +31,23 @@ export function enqueueCj<T>(task: () => Promise<T>): Promise<T> {
   return run;
 }
 
+let interactiveHolds = 0;
+let lastInteractiveAt = 0;
+
+/** El buscador marca que está en curso para que la carga del listado le ceda el turno. */
+export function enterInteractive(): () => void {
+  interactiveHolds += 1;
+  lastInteractiveAt = Date.now();
+  return () => {
+    interactiveHolds = Math.max(0, interactiveHolds - 1);
+    lastInteractiveAt = Date.now();
+  };
+}
+
+export function shouldYieldToInteractive(): boolean {
+  return interactiveHolds > 0 || Date.now() - lastInteractiveAt < 2500;
+}
+
 export function isCjRateLimitMessage(message: unknown): boolean {
   const msg = String(message ?? "").toLowerCase();
   return (

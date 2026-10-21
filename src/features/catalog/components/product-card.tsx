@@ -1,10 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { listStockFromListItem } from "@/core/products/stock-merge";
 import type { CjProductListItem } from "@/core/products/types";
+import type { BogotaQuote } from "../hooks/use-bogota-quotes";
 import type { GalleryStatus } from "../hooks/use-card-galleries";
 import type { CardGallery } from "../lib/card-gallery";
+import { BilingualName } from "./bilingual-name";
+import { CopAmount } from "@/features/fx/cop-amount";
+import { finalPriceUsd, formatUsd, priceWithShipping } from "../lib/quote-preview";
 import {
   deliveryLabel,
   isNewListing,
@@ -13,16 +18,34 @@ import {
   optionLabel,
   presentCardPrice,
   suggestRetailLabel,
+  unitPriceUsd,
 } from "../lib/store-card";
 
 type Props = {
   product: CjProductListItem;
   gallery?: CardGallery | null;
   galleryState: GalleryStatus;
+  selected: boolean;
+  benefitPercent: number;
+  quote?: BogotaQuote;
+  spanish?: string | null;
+  translating?: boolean;
+  onToggle: (id: string) => void;
   onVisible: (id: string, visible: boolean) => void;
 };
 
-export function ProductCard({ product, gallery, galleryState, onVisible }: Props) {
+export function ProductCard({
+  product,
+  gallery,
+  galleryState,
+  selected,
+  benefitPercent,
+  quote,
+  spanish,
+  translating = false,
+  onToggle,
+  onVisible,
+}: Props) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [imageIndex, setImageIndex] = useState(0);
   const [broken, setBroken] = useState(false);
@@ -91,11 +114,22 @@ export function ProductCard({ product, gallery, galleryState, onVisible }: Props
     setImageIndex(next);
   }
 
+  const unit = unitPriceUsd(product);
+  const shipping = quote?.status === "ready" ? quote.shippingUsd : null;
+  const landed = shipping == null ? null : priceWithShipping(unit, shipping);
+  const finalPrice = finalPriceUsd(landed, benefitPercent);
+
   return (
-    <article className="group flex flex-col overflow-hidden rounded-2xl border border-[var(--color-cj-border)] bg-[var(--color-cj-panel)] transition duration-200 hover:-translate-y-1 hover:border-slate-500/70 hover:shadow-xl hover:shadow-black/30">
+    <article
+      className={`group flex flex-col overflow-hidden rounded-2xl border bg-[var(--color-cj-panel)] transition duration-200 hover:-translate-y-1 hover:border-[var(--color-cj-lime)] hover:shadow-lg hover:shadow-black/10 ${
+        selected
+          ? "border-[var(--color-cj-lime)] ring-2 ring-[var(--color-cj-lime)]"
+          : "border-[var(--color-cj-border)]"
+      }`}
+    >
       <div
         ref={frameRef}
-        className="relative aspect-square overflow-hidden bg-[#eef1f4]"
+        className="relative aspect-square overflow-hidden bg-[var(--color-cj-bg)]"
         onMouseMove={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
           scrub(e.clientX, rect.width, rect.left);
@@ -118,19 +152,28 @@ export function ProductCard({ product, gallery, galleryState, onVisible }: Props
           </div>
         )}
 
-        <div className="pointer-events-none absolute left-2 top-2 flex max-w-[70%] flex-col items-start gap-1.5">
+        <label className="absolute left-2 top-2 z-20 flex h-7 w-7 cursor-pointer items-center justify-center rounded-md bg-white shadow">
+          <input
+            type="checkbox"
+            aria-label={`Seleccionar ${product.nameEn ?? product.sku ?? product.id}`}
+            checked={selected}
+            onChange={() => onToggle(product.id)}
+          />
+        </label>
+
+        <div className="pointer-events-none absolute left-11 top-2 flex max-w-[70%] flex-col items-start gap-1.5">
           {price.percentOff != null && (
-            <span className="rounded-md bg-rose-600 px-2 py-0.5 text-xs font-bold text-white shadow-sm">
+            <span className="rounded-md bg-[var(--color-cj-coral)] px-2 py-0.5 text-xs font-bold text-white shadow-sm">
               -{price.percentOff}%
             </span>
           )}
           {freeShipping && (
-            <span className="rounded-md bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white shadow-sm">
+            <span className="rounded-md bg-[#202C49] px-2 py-0.5 text-[11px] font-semibold text-white shadow-sm">
               Envío gratis
             </span>
           )}
           {fresh && (
-            <span className="rounded-md bg-violet-600 px-2 py-0.5 text-[11px] font-semibold text-white shadow-sm">
+            <span className="rounded-md bg-[var(--color-cj-lime)] px-2 py-0.5 text-[11px] font-semibold text-[#171A20] shadow-sm">
               Nuevo
             </span>
           )}
@@ -138,12 +181,12 @@ export function ProductCard({ product, gallery, galleryState, onVisible }: Props
 
         <div className="pointer-events-none absolute right-2 top-2 flex flex-col items-end gap-1.5">
           {hasVideo && (
-            <span className="rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-medium text-white">
+            <span className="rounded-full bg-[var(--color-cj-carbon)] px-2 py-0.5 text-[10px] font-medium text-[var(--color-cj-bg)]">
               Video
             </span>
           )}
           {certified && (
-            <span className="rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-medium text-white">
+            <span className="rounded-full bg-[var(--color-cj-carbon)] px-2 py-0.5 text-[10px] font-medium text-[var(--color-cj-bg)]">
               CE
             </span>
           )}
@@ -153,10 +196,10 @@ export function ProductCard({ product, gallery, galleryState, onVisible }: Props
           <span
             className={`pointer-events-none absolute bottom-2 left-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
               stockTone === "out"
-                ? "bg-red-600 text-white"
+                ? "bg-[var(--color-cj-coral)] text-white"
                 : stockTone === "low"
-                  ? "bg-amber-400 text-amber-950"
-                  : "bg-white/90 text-emerald-700"
+                  ? "bg-[var(--color-cj-lime)] text-[#171A20]"
+                  : "bg-white/90 text-[var(--color-cj-navy)]"
             }`}
           >
             {stockTone === "out"
@@ -222,8 +265,12 @@ export function ProductCard({ product, gallery, galleryState, onVisible }: Props
             {category}
           </p>
         )}
-        <h3 className="line-clamp-2 min-h-10 text-sm font-medium leading-snug text-[var(--color-cj-text)]">
-          {product.nameEn ?? product.sku ?? "Producto sin nombre"}
+        <h3 className="text-sm font-medium leading-snug text-[var(--color-cj-text)]">
+          <BilingualName
+            english={product.nameEn ?? product.sku ?? "Producto sin nombre"}
+            spanish={spanish}
+            pending={translating && Boolean(product.nameEn)}
+          />
         </h3>
 
         <div className="flex flex-wrap items-end gap-x-2 gap-y-1">
@@ -240,6 +287,17 @@ export function ProductCard({ product, gallery, galleryState, onVisible }: Props
           </span>
         </div>
         {suggest && <p className="text-xs text-[var(--color-cj-muted)]">{suggest}</p>}
+        <p className="text-xs text-[var(--color-cj-muted)]">
+          {!quote || quote.status === "loading"
+            ? "Cotizando envío a Bogotá…"
+            : quote.status === "ready" && landed != null
+              ? `Con envío ${formatUsd(landed)}${quote.carrier ? ` · ${quote.carrier}` : ""}`
+              : (quote.message ?? "Sin envío a Bogotá")}
+        </p>
+        <p className="text-sm font-semibold tabular-nums text-[var(--color-cj-text)]">
+          Final {formatUsd(finalPrice)}
+          <CopAmount usd={finalPrice} />
+        </p>
 
         <p className="text-xs text-[var(--color-cj-muted)]">
           {stock.value != null ? (
@@ -280,15 +338,12 @@ export function ProductCard({ product, gallery, galleryState, onVisible }: Props
           </p>
         )}
 
-        {/*
-          Detalle desactivado: no redirigir todavía.
-          <Link
-            href={`/product/${product.id}`}
-            className="mt-3 inline-flex justify-center rounded-lg bg-blue-600 py-2 text-sm font-medium hover:bg-blue-500"
-          >
-            Ver detalle
-          </Link>
-        */}
+        <Link
+          href={`/product/${product.id}`}
+          className="mt-1 inline-flex justify-center rounded-lg border border-[var(--color-cj-border)] py-2 text-sm font-semibold text-[var(--color-cj-text)] hover:bg-[var(--color-cj-chip)]"
+        >
+          Ver detalle
+        </Link>
       </div>
     </article>
   );

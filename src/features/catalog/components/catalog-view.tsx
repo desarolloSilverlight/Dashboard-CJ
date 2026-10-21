@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,15 +11,23 @@ import {
 } from "@/core/products/category-tree";
 import type { CatalogCacheEntry } from "@/providers/catalog-cache-provider";
 import type { CategoryL1, CjProductListItem } from "@/core/products/types";
+import { useBogotaQuotes } from "../hooks/use-bogota-quotes";
 import { useCardGalleries } from "../hooks/use-card-galleries";
+import { CatalogImportPanel } from "@/features/admin/components/catalog-import-panel";
+import { CatalogParameters } from "./catalog-parameters";
+import { useNameTranslations } from "../hooks/use-name-translations";
+import { TranslationTrial } from "./translation-trial";
 import { ProductCard } from "./product-card";
+import { ProductTable } from "./product-table";
 import { CategoryHierarchySelect } from "@/components/catalog/category-hierarchy-select";
 import { useCatalogService } from "../hooks/use-catalog-service";
+import { useAdminSync } from "@/providers/admin-sync-provider";
 import { useAuthStatus } from "@/providers/auth-status-provider";
 import { useCatalogCache } from "@/providers/catalog-cache-provider";
+import { listImages, unitPriceUsd } from "../lib/store-card";
 
 const PAGE_SIZE = 20;
-const DEMO_GALLERY_LIMIT = 5;
+const LIST_CAP = 20;
 
 export function CatalogView() {
   const { configured } = useAuthStatus();
@@ -38,21 +47,51 @@ export function CatalogView() {
   const [error, setError] = useState<string | null>(null);
   const [fromCache, setFromCache] = useState(false);
   const [page, setPage] = useState(1);
+  const [view, setView] = useState<"cards" | "table">("table");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const admin = useAdminSync();
+  const benefitPercent = admin.benefitPercent;
+  const [shopifyNotice, setShopifyNotice] = useState<string | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const productKey = products.map((p) => p.id).join("\n");
   const pageCount = Math.max(1, Math.ceil(products.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
   const pageStart = (currentPage - 1) * PAGE_SIZE;
   const pageItems = products.slice(pageStart, pageStart + PAGE_SIZE);
-  const galleryDemoProducts = products.slice(0, DEMO_GALLERY_LIMIT);
+  const names = useNameTranslations(pageItems.map((product) => product.nameEn ?? ""));
   const galleries = useCardGalleries(
-    galleryDemoProducts,
-    galleryDemoProducts.map((p) => p.id),
+    products,
+    products.map((p) => p.id),
   );
+  const bogota = useBogotaQuotes(galleries.galleries, galleries.status);
 
   useEffect(() => {
     setPage(1);
+    setSelectedIds(new Set());
+    setShopifyNotice(null);
   }, [productKey]);
+
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    setShopifyNotice(null);
+  }, []);
+
+  const togglePage = useCallback((ids: string[], on: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) {
+        if (on) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+    setShopifyNotice(null);
+  }, []);
 
   const selectedL1 = useMemo(
     () =>
@@ -66,7 +105,7 @@ export function CatalogView() {
     setParentKey(entry.parentKey);
     setSubKey(entry.subKey || "all");
     setKeyWord(entry.keyWord);
-    setProducts(entry.products.slice(0, 100));
+    setProducts(entry.products.slice(0, LIST_CAP));
     setTotalRecords(entry.totalRecords);
     setFromCache(true);
     setProgress(null);
@@ -198,7 +237,7 @@ export function CatalogView() {
   }
 
   return (
-    <div className="mx-auto max-w-[1600px] p-4">
+    <div className="mx-auto max-w-[1600px] px-3 py-4 sm:px-4">
       <div className="mb-6 space-y-4 rounded-xl border border-[var(--color-cj-border)] bg-[var(--color-cj-panel)] p-4">
         <CategoryHierarchySelect
           categories={categories}
@@ -225,7 +264,7 @@ export function CatalogView() {
             disabled={loading || !parentKey || !configured}
             onClick={searchProducts}
           >
-            {loading ? "Cargando…" : "Buscar (100 max)"}
+            {loading ? "Cargando…" : "Buscar (20)"}
           </Button>
         </div>
         <p className="text-[11px] text-[var(--color-cj-faint)]">
@@ -234,6 +273,9 @@ export function CatalogView() {
             : `${categories.length} categorías padre · subcategorías solo del padre seleccionado`}
         </p>
       </div>
+
+      <CatalogParameters benefitPercent={benefitPercent} onBenefit={admin.setBenefitPercent} />
+      <CatalogImportPanel compact />
 
       <div
         ref={resultsRef}
@@ -246,17 +288,61 @@ export function CatalogView() {
           {totalRecords > 0 && ` · ${totalRecords} coincidencias (CJ)`}
         </span>
         {fromCache && products.length > 0 && (
-          <span className="rounded bg-emerald-500/15 px-2 py-0.5 text-xs text-[var(--color-cj-price)]">
+          <span className="rounded bg-[var(--color-cj-lime)] px-2 py-0.5 text-xs font-semibold text-[#171A20]">
             Caché de esta búsqueda
           </span>
         )}
         {progress && <span className="text-xs text-[var(--color-cj-accent)]">{progress}</span>}
         {products.length > 0 && (
           <span className="text-xs text-[var(--color-cj-accent)]">
-            Galerías demo {galleries.readyCount}/{Math.min(DEMO_GALLERY_LIMIT, products.length)}
+            Detalle {galleries.readyCount}/{products.length}
+            {bogota.total > 0 ? ` · envío Bogotá ${bogota.quotedCount}/${bogota.total}` : ""}
           </span>
         )}
-        {error && <span className="text-xs text-red-400">{error}</span>}
+        {error && <span className="text-xs text-[var(--color-cj-coral)]">{error}</span>}
+        {products.length > 0 && (
+          <div className="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto">
+            <span className="text-xs text-[var(--color-cj-faint)]">
+              {selectedIds.size} seleccionados
+            </span>
+            <Button
+              variant="secondary"
+              className="px-3 py-1.5"
+              disabled={selectedIds.size === 0}
+              onClick={() => {
+                const drafts = products
+                  .filter((product) => selectedIds.has(product.id))
+                  .map((product) => {
+                    const gallery = galleries.galleries[product.id];
+                    const quote = bogota.quotes[product.id];
+                    return {
+                      id: product.id,
+                      name: product.nameEn ?? product.sku ?? "Producto sin nombre",
+                      sku: product.sku ?? null,
+                      image: gallery?.images[0] ?? listImages(product)[0] ?? null,
+                      unitUsd: unitPriceUsd(product),
+                      shippingUsd: quote?.status === "ready" ? quote.shippingUsd : null,
+                      variantCount: gallery?.variantCount ?? null,
+                    };
+                  });
+                const added = admin.addToQueue(drafts);
+                setShopifyNotice(
+                  `${drafts.length} producto${drafts.length === 1 ? "" : "s"} en la cola de sincronización${added < drafts.length ? ` (${drafts.length - added} ya estaba${drafts.length - added === 1 ? "" : "n"})` : ""}.`,
+                );
+              }}
+            >
+              Agregar a Shopify
+            </Button>
+            <div className="flex rounded-full border border-[var(--color-cj-border)] p-0.5" role="group" aria-label="Vista">
+              <ViewButton active={view === "cards"} onClick={() => setView("cards")}>
+                Tarjetas
+              </ViewButton>
+              <ViewButton active={view === "table"} onClick={() => setView("table")}>
+                Tabla
+              </ViewButton>
+            </div>
+          </div>
+        )}
         {products.length > PAGE_SIZE && (
           <CatalogPager
             page={currentPage}
@@ -266,19 +352,61 @@ export function CatalogView() {
         )}
       </div>
 
+      {shopifyNotice && (
+        <p className="mb-3 rounded-lg bg-[var(--color-cj-lime)] px-3 py-2 text-sm font-medium text-[#171A20]">
+          {shopifyNotice}{" "}
+          <Link href="/sincronizar" className="underline">
+            Abrir sincronización
+          </Link>
+        </p>
+      )}
+
+      <TranslationTrial />
+
+      {names.configured === false && (
+        <p className="mb-3 rounded-lg border border-[var(--color-cj-border)] bg-[var(--color-cj-panel)] px-3 py-2 text-xs text-[var(--color-cj-muted)]">
+          Al buscar, cada nombre queda en inglés y debajo en español. Pega{" "}
+          <span className="font-mono">DEEPL_API_KEY</span> en .env.local y reinicia el panel. La clave no sale al navegador.
+        </p>
+      )}
+      {names.message && (
+        <p className="mb-3 text-xs text-[var(--color-cj-coral)]">{names.message}</p>
+      )}
+
       {products.length > 0 ? (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-            {pageItems.map((p) => (
-              <ProductCard
-                key={p.id}
-                product={p}
-                gallery={galleries.galleries[p.id]}
-                galleryState={galleries.status[p.id] ?? "pending"}
-                onVisible={galleries.markVisible}
-              />
-            ))}
-          </div>
+          {view === "table" ? (
+            <ProductTable
+              products={pageItems}
+              selected={selectedIds}
+              benefitPercent={benefitPercent}
+              galleries={galleries.galleries}
+              galleryStatus={galleries.status}
+              quotes={bogota.quotes}
+              spanish={names.spanish}
+              translating={names.pending && names.configured === true}
+              onToggle={toggleSelected}
+              onTogglePage={togglePage}
+            />
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+              {pageItems.map((p) => (
+                <ProductCard
+                  key={p.id}
+                  product={p}
+                  gallery={galleries.galleries[p.id]}
+                  galleryState={galleries.status[p.id] ?? "pending"}
+                  selected={selectedIds.has(p.id)}
+                  benefitPercent={benefitPercent}
+                  quote={bogota.quotes[p.id]}
+                  spanish={p.nameEn ? names.spanish[p.nameEn] : null}
+                  translating={names.pending && names.configured === true}
+                  onToggle={toggleSelected}
+                  onVisible={galleries.markVisible}
+                />
+              ))}
+            </div>
+          )}
           {products.length > PAGE_SIZE && (
             <div className="mt-6 flex justify-center">
               <CatalogPager
@@ -297,6 +425,31 @@ export function CatalogView() {
         )
       )}
     </div>
+  );
+}
+
+function ViewButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={`rounded-full px-3 py-1 text-xs font-semibold ${
+        active
+          ? "bg-[var(--color-cj-lime)] text-[#171A20]"
+          : "text-[var(--color-cj-muted)]"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -361,7 +514,7 @@ function PagerButton({
       onClick={onClick}
       className={`min-w-9 rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
         current
-          ? "bg-blue-600 text-white"
+          ? "bg-[var(--color-cj-lime)] font-semibold text-[#171A20]"
           : "bg-[var(--color-cj-chip)] text-[var(--color-cj-muted)] hover:text-[var(--color-cj-text)]"
       } disabled:cursor-not-allowed disabled:opacity-40`}
     >

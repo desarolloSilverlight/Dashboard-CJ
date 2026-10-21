@@ -1,8 +1,15 @@
-import type { CjProductDetail } from "@/core/products/types";
+import type { CjProductDetail, CjVariant } from "@/core/products/types";
 import {
   formatWeightGrams,
   parseCjStringList,
 } from "@/features/product/lib/parse-cj-fields";
+import {
+  originCountryOptions,
+  productLogisticsProps,
+  unitPriceUsd,
+  variantVolumeCm3,
+  variantWeightGrams,
+} from "@/features/product/lib/variant-metrics";
 import { getOptionAxisNames } from "@/features/product/lib/variant-selection";
 
 const MAX_CARD_IMAGES = 6;
@@ -20,6 +27,19 @@ export type CardGallery = {
   freeShipping: boolean;
   options: string | null;
   material: string | null;
+  freight: CardFreightSeed | null;
+};
+
+/** Variante más barata, lista para cotizar flete a Bogotá. */
+export type CardFreightSeed = {
+  vid: string;
+  variantSku: string;
+  unitPriceUsd: number;
+  startCountryCode: string;
+  weightG: number;
+  wrapWeightG: number;
+  volumeCm3: number;
+  productProps: string[];
 };
 
 function pushImages(urls: string[], value: unknown) {
@@ -75,6 +95,7 @@ export function toCardGallery(detail: CjProductDetail, fallbackPid?: string): Ca
   const optionText = options && /[a-zA-Z]/.test(options) ? options : null;
 
   const record = detail as CjProductDetail & { id?: string };
+  const freightVariant = cheapestQuotableVariant(detail);
 
   return {
     pid: record.pid || record.id || fallbackPid || "",
@@ -89,5 +110,30 @@ export function toCardGallery(detail: CjProductDetail, fallbackPid?: string): Ca
     freeShipping: detail.addMarkStatus === 1,
     options: optionText,
     material,
+    freight: freightVariant ? freightSeed(detail, freightVariant) : null,
+  };
+}
+
+function cheapestQuotableVariant(detail: CjProductDetail): CjVariant | undefined {
+  const usable = (detail.variants ?? []).filter((v) => v.vid && v.variantSku);
+  if (!usable.length) return undefined;
+  return usable.reduce((best, variant) => {
+    const price = variant.variantSellPrice ?? Number.POSITIVE_INFINITY;
+    const bestPrice = best.variantSellPrice ?? Number.POSITIVE_INFINITY;
+    return price < bestPrice ? variant : best;
+  });
+}
+
+function freightSeed(detail: CjProductDetail, variant: CjVariant): CardFreightSeed {
+  const weightG = variantWeightGrams(variant, detail);
+  return {
+    vid: variant.vid ?? "",
+    variantSku: variant.variantSku ?? "",
+    unitPriceUsd: unitPriceUsd(variant, detail),
+    startCountryCode: originCountryOptions(variant)[0] ?? "CN",
+    weightG,
+    wrapWeightG: weightG,
+    volumeCm3: variantVolumeCm3(variant),
+    productProps: productLogisticsProps(detail),
   };
 }

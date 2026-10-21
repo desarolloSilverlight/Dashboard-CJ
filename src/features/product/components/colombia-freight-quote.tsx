@@ -45,7 +45,7 @@ export function ColombiaFreightQuote({ product, variant }: Props) {
     return (
       <section className="rounded-2xl border border-[var(--color-cj-border)] bg-[var(--color-cj-panel)] p-5">
         <h2 className="text-lg font-semibold">Cotización a Colombia</h2>
-        <p className="mt-2 text-sm text-slate-500">
+        <p className="mt-2 text-sm text-[var(--color-cj-muted)]">
           Selecciona una variante para calcular envío.
         </p>
       </section>
@@ -102,10 +102,10 @@ export function ColombiaFreightQuote({ product, variant }: Props) {
   return (
     <section className="mt-14 border-t border-[var(--color-cj-border)] pt-10">
       <h2 className="text-xl font-semibold">Cotización estimada a Colombia</h2>
-      <p className="mt-1 text-sm text-slate-500">
+      <p className="mt-1 text-sm text-[var(--color-cj-muted)]">
         Usa las APIs{" "}
-        <code className="text-xs text-slate-400">freightCalculate</code> +{" "}
-        <code className="text-xs text-slate-400">freightCalculateTip</code>.
+        <code className="text-xs text-[var(--color-cj-faint)]">freightCalculate</code> +{" "}
+        <code className="text-xs text-[var(--color-cj-faint)]">freightCalculateTip</code>.
         Estimado CJ en USD; impuestos locales en destino pueden aplicar aparte.
       </p>
 
@@ -149,7 +149,7 @@ export function ColombiaFreightQuote({ product, variant }: Props) {
         </div>
       </div>
 
-      <p className="mt-2 text-xs text-slate-600">
+      <p className="mt-2 text-xs text-[var(--color-cj-muted)]">
         Variante: {variant.variantSku} · Peso ~{variantWeightGrams(variant, product)} g
         · Precio unit. ${price.toFixed(2)}
       </p>
@@ -157,18 +157,18 @@ export function ColombiaFreightQuote({ product, variant }: Props) {
       {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
 
       {quote?.cheapest && (
-        <div className="mt-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5">
-          <p className="text-xs uppercase tracking-wide text-emerald-400/90">
+        <div className="mt-6 rounded-2xl border border-[var(--color-cj-lime)] bg-[var(--color-cj-chip)] p-5">
+          <p className="text-xs uppercase tracking-wide text-[var(--color-cj-navy)]">
             Mejor estimado
           </p>
-          <p className="mt-1 text-2xl font-bold text-emerald-300">
+          <p className="mt-1 text-2xl font-bold text-[var(--color-cj-price)]">
             ${quote.cheapest.estimatedTotalUsd.toFixed(2)} USD
           </p>
-          <p className="mt-1 text-sm text-slate-300">
+          <p className="mt-1 text-sm text-[var(--color-cj-text)]">
             {quote.cheapest.carrierName}
             {quote.cheapest.arrivalTime && ` · ${quote.cheapest.arrivalTime} días`}
           </p>
-          <p className="mt-2 text-xs text-slate-500">
+          <p className="mt-2 text-xs text-[var(--color-cj-muted)]">
             Producto ${quote.cheapest.productSubtotalUsd.toFixed(2)} + envío $
             {quote.cheapest.shippingTotalUsd.toFixed(2)}
           </p>
@@ -177,12 +177,12 @@ export function ColombiaFreightQuote({ product, variant }: Props) {
 
       {quote && quote.options.length > 0 && (
         <div className="mt-6 space-y-4">
-          <h3 className="text-sm font-semibold text-slate-300">
+          <h3 className="text-sm font-semibold text-[var(--color-cj-text)]">
             Métodos de envío ({quote.options.length})
           </h3>
           <div className="overflow-x-auto rounded-xl border border-[var(--color-cj-border)]">
             <table className="w-full min-w-[720px] text-left text-sm">
-              <thead className="bg-[var(--color-cj-panel)] text-xs uppercase text-slate-500">
+              <thead className="bg-[var(--color-cj-chip)] text-xs uppercase text-[var(--color-cj-muted)]">
                 <tr>
                   <th className="p-3">Transportista</th>
                   <th className="p-3">Tiempo</th>
@@ -199,20 +199,20 @@ export function ColombiaFreightQuote({ product, variant }: Props) {
                     className="border-t border-[var(--color-cj-border)]"
                   >
                     <td className="p-3 font-medium">{opt.carrierName}</td>
-                    <td className="p-3 text-slate-400">{opt.arrivalTime ?? "—"}</td>
+                    <td className="p-3 text-[var(--color-cj-muted)]">{opt.arrivalTime ?? "—"}</td>
                     <td className="p-3 tabular-nums">
                       ${opt.productSubtotalUsd.toFixed(2)}
                     </td>
                     <td className="p-3 tabular-nums">
                       ${opt.shippingTotalUsd.toFixed(2)}
                     </td>
-                    <td className="p-3 tabular-nums font-semibold text-emerald-400">
+                    <td className="p-3 tabular-nums font-semibold text-[var(--color-cj-price)]">
                       ${opt.estimatedTotalUsd.toFixed(2)}
                     </td>
                     <td className="p-3">
                       <button
                         type="button"
-                        className="text-xs text-blue-400 hover:underline"
+                        className="text-xs font-semibold text-[var(--color-cj-navy)] hover:underline"
                         onClick={() =>
                           setExpanded(
                             expanded === opt.carrierName ? null : opt.carrierName,
@@ -245,7 +245,7 @@ function BreakdownTable({ option }: { option: FreightShippingOption }) {
     <div className="rounded-xl border border-[var(--color-cj-border)] bg-[var(--color-cj-panel)] p-4">
       <h4 className="mb-3 font-medium">
         Desglose — {option.carrierName}
-        <span className="ml-2 text-xs font-normal text-slate-500">
+        <span className="ml-2 text-xs font-normal text-[var(--color-cj-muted)]">
           ({option.source === "tip" ? "Tip + Calculate" : "Calculate"})
         </span>
       </h4>
@@ -254,7 +254,7 @@ function BreakdownTable({ option }: { option: FreightShippingOption }) {
       )}
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-xs text-slate-500">
+          <tr className="text-left text-xs text-[var(--color-cj-muted)]">
             <th className="pb-2">Concepto</th>
             <th className="pb-2 text-right">USD</th>
           </tr>
@@ -265,16 +265,16 @@ function BreakdownTable({ option }: { option: FreightShippingOption }) {
               key={line.label}
               className={`border-t border-[var(--color-cj-border)] ${
                 line.label.includes("Total estimado")
-                  ? "font-semibold text-emerald-400"
+                  ? "font-semibold text-[var(--color-cj-price)]"
                   : line.label.includes("Total envío")
-                    ? "font-medium text-slate-200"
+                    ? "font-medium text-[var(--color-cj-text)]"
                     : ""
               }`}
             >
-              <td className="py-2 pr-4 text-slate-300">
+              <td className="py-2 pr-4 text-[var(--color-cj-text)]">
                 {line.label}
                 {line.note && (
-                  <span className="ml-1 text-[10px] text-slate-600">
+                  <span className="ml-1 text-[10px] text-[var(--color-cj-faint)]">
                     ({line.note})
                   </span>
                 )}
@@ -299,7 +299,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[11px] text-slate-500">{label}</span>
+      <span className="mb-1 block text-[11px] text-[var(--color-cj-faint)]">{label}</span>
       {children}
     </label>
   );

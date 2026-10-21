@@ -16,6 +16,8 @@ import {
   initialSelectedParts,
   splitVariantKey,
 } from "../lib/variant-selection";
+import { readBrowserCache, writeBrowserCache } from "@/features/catalog/lib/browser-cache";
+import { CopAmount } from "@/features/fx/cop-amount";
 import { ColombiaFreightQuote } from "./colombia-freight-quote";
 import { ProductInventorySection } from "./product-inventory-section";
 
@@ -29,11 +31,20 @@ export function ProductShopView({ pid }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [selectedParts, setSelectedParts] = useState<string[]>([]);
   const [activeImage, setActiveImage] = useState(0);
+  const [descImage, setDescImage] = useState(0);
   const fetchGen = useRef(0);
 
   useEffect(() => {
     const gen = ++fetchGen.current;
     let cancelled = false;
+    const cached = readBrowserCache<CjProductDetail>(`gazu:detail:${pid}`);
+    if (cached?.pid) {
+      setDetail(cached);
+      setSelectedParts(initialSelectedParts(cached.variants ?? []));
+      setLoading(false);
+      setError(null);
+      return;
+    }
     (async () => {
       setLoading(true);
       setError(null);
@@ -45,6 +56,7 @@ export function ProductShopView({ pid }: Props) {
           throw new Error(res.message ?? "Producto no encontrado");
         }
         const data = res.data as CjProductDetail;
+        writeBrowserCache(`gazu:detail:${data.pid || pid}`, data);
         setDetail(data);
         setSelectedParts(initialSelectedParts(data.variants ?? []));
       } catch (e) {
@@ -90,6 +102,7 @@ export function ProductShopView({ pid }: Props) {
   const packing = parseCjStringList(detail?.packingNameEnSet);
   const logistics = parseCjStringList(detail?.productProEnSet);
 
+  const sellUsd = asUsd(selectedVariant?.variantSellPrice ?? detail?.sellPrice);
   const displayPrice =
     formatUsd(selectedVariant?.variantSellPrice) ??
     formatUsd(detail?.sellPrice) ??
@@ -106,8 +119,8 @@ export function ProductShopView({ pid }: Props) {
   if (error || !detail) {
     return (
       <div className="mx-auto max-w-lg p-8 text-center">
-        <p className="text-red-400">{error ?? "Sin datos"}</p>
-        <Link href="/" className="mt-4 inline-block text-blue-400 hover:underline">
+        <p className="text-[var(--color-cj-coral)]">{error ?? "Sin datos"}</p>
+        <Link href="/" className="mt-4 inline-block text-[var(--color-cj-navy)] hover:underline">
           Volver al catálogo
         </Link>
       </div>
@@ -116,9 +129,12 @@ export function ProductShopView({ pid }: Props) {
 
   const mainImage = gallery[activeImage];
   const freeShipping = detail.addMarkStatus === 1;
+  const description = detail.description
+    ? splitDescriptionImages(detail.description)
+    : { textHtml: "", images: [] as string[] };
 
   return (
-    <div className="mx-auto max-w-[1280px] px-4 pb-20 pt-2">
+    <div className="mx-auto max-w-[1280px] px-3 pb-24 pt-2 sm:px-4">
       <Link
         href="/"
         className="mb-6 inline-flex items-center gap-2 text-sm text-[var(--color-cj-muted)] transition hover:text-[var(--color-cj-text)]"
@@ -126,9 +142,9 @@ export function ProductShopView({ pid }: Props) {
         ← Volver al catálogo
       </Link>
 
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-        <div className="space-y-4">
-          <div className="relative aspect-square overflow-hidden rounded-2xl border border-[var(--color-cj-border)] bg-gradient-to-b from-white/[0.04] to-black/40 p-6 shadow-2xl shadow-black/40">
+      <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
+        <div className="space-y-3 lg:sticky lg:top-4">
+          <div className="relative aspect-square overflow-hidden rounded-2xl border border-[var(--color-cj-border)] bg-[var(--color-cj-bg)] p-4">
             {mainImage ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -137,7 +153,7 @@ export function ProductShopView({ pid }: Props) {
                 className="h-full w-full object-contain transition duration-300"
               />
             ) : (
-              <div className="flex h-full items-center justify-center text-slate-600">
+              <div className="flex h-full items-center justify-center text-[var(--color-cj-faint)]">
                 Sin imagen
               </div>
             )}
@@ -149,10 +165,10 @@ export function ProductShopView({ pid }: Props) {
                   key={`${url}-${i}`}
                   type="button"
                   onClick={() => setActiveImage(i)}
-                  className={`h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2 bg-black/30 transition ${
+                  className={`h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 bg-[var(--color-cj-bg)] transition ${
                     i === activeImage
-                      ? "border-blue-500 ring-2 ring-blue-500/30"
-                      : "border-transparent opacity-70 hover:opacity-100"
+                      ? "border-[var(--color-cj-lime)] ring-2 ring-[var(--color-cj-lime)]"
+                      : "border-[var(--color-cj-border)] opacity-80 hover:opacity-100"
                   }`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -166,14 +182,14 @@ export function ProductShopView({ pid }: Props) {
         <div className="space-y-6">
           <div>
             {detail.categoryName && (
-              <p className="text-xs font-medium uppercase tracking-wider text-blue-400/90">
+              <p className="text-xs font-medium uppercase tracking-wider text-[var(--color-cj-navy)]">
                 {detail.categoryName.replace(/,/g, " · ")}
               </p>
             )}
-            <h1 className="mt-2 text-2xl font-semibold leading-tight text-[var(--color-cj-text)] sm:text-3xl">
+            <h1 className="mt-2 text-xl font-semibold leading-tight text-[var(--color-cj-text)] sm:text-3xl">
               {detail.productNameEn}
             </h1>
-            <p className="mt-2 font-mono text-xs text-slate-500">
+            <p className="mt-2 font-mono text-xs text-[var(--color-cj-faint)]">
               SPU {detail.productSku} · ID {detail.pid}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -189,37 +205,38 @@ export function ProductShopView({ pid }: Props) {
 
           <div className="rounded-2xl border border-[var(--color-cj-border)] bg-[var(--color-cj-panel)] p-5">
             <div className="flex flex-wrap items-end gap-3">
-              <span className="text-4xl font-bold tabular-nums text-emerald-400">
+              <span className="text-4xl font-bold tabular-nums text-[var(--color-cj-price)]">
                 ${displayPrice}
               </span>
               {detail.suggestSellPrice && (
-                <span className="pb-1 text-sm text-slate-500">
+                <span className="pb-1 text-sm text-[var(--color-cj-muted)]">
                   Retail sugerido: {detail.suggestSellPrice}
                 </span>
               )}
             </div>
+            <CopAmount usd={sellUsd} />
             {suggestVariant && (
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-[var(--color-cj-muted)]">
                 Sugerido variante: ${suggestVariant}
               </p>
             )}
             {totalStock != null && (
-              <p className="mt-3 text-sm text-slate-300">
+              <p className="mt-3 text-sm text-[var(--color-cj-muted)]">
                 Stock total (variante):{" "}
-                <span className="font-medium text-white">{totalStock}</span>
+                <span className="font-medium text-[var(--color-cj-text)]">{totalStock}</span>
               </p>
             )}
           </div>
 
           {variants.length > 0 && (
             <div className="space-y-5 rounded-2xl border border-[var(--color-cj-border)] bg-[var(--color-cj-panel)] p-5">
-              <h2 className="text-sm font-semibold text-slate-200">Opciones</h2>
+              <h2 className="text-sm font-semibold text-[var(--color-cj-text)]">Opciones</h2>
               {axisNames.map((axisName, axisIndex) => {
                 const values = getUniqueOptionValues(variants, axisIndex);
                 if (!values.length) return null;
                 return (
                   <div key={axisName}>
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--color-cj-muted)]">
                       {axisName}
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -237,10 +254,10 @@ export function ProductShopView({ pid }: Props) {
                                 return next;
                               });
                             }}
-                            className={`min-w-[3rem] rounded-xl border px-4 py-2.5 text-sm font-medium transition ${
+                            className={`min-w-[3rem] rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
                               active
-                                ? "border-blue-500 bg-blue-600/25 text-white shadow-lg shadow-blue-900/20"
-                                : "border-[var(--color-cj-border)] bg-black/20 text-slate-300 hover:border-slate-500"
+                                ? "border-[#171A20] bg-[var(--color-cj-lime)] text-[#171A20]"
+                                : "border-[var(--color-cj-border)] bg-[var(--color-cj-chip)] text-[var(--color-cj-text)] hover:border-[var(--color-cj-carbon)]"
                             }`}
                           >
                             {val}
@@ -281,10 +298,19 @@ export function ProductShopView({ pid }: Props) {
       {detail.description && (
         <section className="mt-14 border-t border-[var(--color-cj-border)] pt-10">
           <h2 className="mb-6 text-xl font-semibold">Descripción</h2>
-          <div
-            className="product-description rounded-2xl border border-[var(--color-cj-border)] bg-[var(--color-cj-panel)] p-6 text-sm leading-relaxed text-slate-300"
-            dangerouslySetInnerHTML={{ __html: detail.description }}
-          />
+          {description.images.length > 0 && (
+            <ImageCarousel
+              images={description.images}
+              index={descImage}
+              onIndex={setDescImage}
+            />
+          )}
+          {description.textHtml.trim() && (
+            <div
+              className="product-description mt-4 rounded-2xl border border-[var(--color-cj-border)] bg-[var(--color-cj-panel)] p-6 text-sm leading-relaxed text-[var(--color-cj-text)]"
+              dangerouslySetInnerHTML={{ __html: description.textHtml }}
+            />
+          )}
         </section>
       )}
 
@@ -293,7 +319,7 @@ export function ProductShopView({ pid }: Props) {
           <h2 className="mb-4 text-lg font-semibold">Todas las variantes</h2>
           <div className="overflow-x-auto rounded-xl border border-[var(--color-cj-border)]">
             <table className="w-full min-w-[640px] text-left text-sm">
-              <thead className="bg-[var(--color-cj-panel)] text-xs uppercase text-slate-500">
+              <thead className="bg-[var(--color-cj-chip)] text-xs uppercase text-[var(--color-cj-muted)]">
                 <tr>
                   <th className="p-3">Opción</th>
                   <th className="p-3">SKU</th>
@@ -305,8 +331,8 @@ export function ProductShopView({ pid }: Props) {
                 {variants.map((v) => (
                   <tr
                     key={v.vid ?? v.variantSku}
-                    className={`cursor-pointer border-t border-[var(--color-cj-border)] hover:bg-white/[0.03] ${
-                      v.vid === selectedVariant?.vid ? "bg-blue-500/10" : ""
+                    className={`cursor-pointer border-t border-[var(--color-cj-border)] hover:bg-[var(--color-cj-chip)] ${
+                      v.vid === selectedVariant?.vid ? "bg-[var(--color-cj-lime)]/35" : ""
                     }`}
                     onClick={() =>
                       setSelectedParts(splitVariantKey(v.variantKey))
@@ -325,8 +351,104 @@ export function ProductShopView({ pid }: Props) {
           </div>
         </section>
       )}
+      <BackToTop />
     </div>
   );
+}
+
+function ImageCarousel({
+  images,
+  index,
+  onIndex,
+}: {
+  images: string[];
+  index: number;
+  onIndex: (index: number) => void;
+}) {
+  const [paused, setPaused] = useState(false);
+  const safe = images.length ? index % images.length : 0;
+  const src = images[safe];
+
+  useEffect(() => {
+    if (paused || images.length < 2) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = window.setInterval(() => {
+      onIndex((safe + 1) % images.length);
+    }, 4500);
+    return () => window.clearInterval(timer);
+  }, [paused, images.length, safe, onIndex]);
+
+  function show(next: number) {
+    onIndex((next + images.length) % images.length);
+  }
+
+  return (
+    <div
+      className="overflow-hidden rounded-2xl border border-[var(--color-cj-border)] bg-[var(--color-cj-panel)]"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocus={() => setPaused(true)}
+      onBlur={() => setPaused(false)}
+    >
+      <div className="relative aspect-[4/3] bg-[var(--color-cj-bg)] sm:aspect-[16/10]">
+        {src && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={src} alt="" className="h-full w-full object-contain p-3 sm:p-4" />
+        )}
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--color-cj-border)] px-3 py-2">
+        <button
+          type="button"
+          className="min-h-11 rounded-lg bg-[var(--color-cj-chip)] px-4 text-xs font-semibold text-[var(--color-cj-text)]"
+          onClick={() => show(safe - 1)}
+        >
+          Anterior
+        </button>
+        <span className="text-xs tabular-nums text-[var(--color-cj-muted)]">
+          {safe + 1} / {images.length}
+          {paused ? "" : " · auto"}
+        </span>
+        <button
+          type="button"
+          className="min-h-11 rounded-lg bg-[var(--color-cj-lime)] px-4 text-xs font-semibold text-[#171A20]"
+          onClick={() => show(safe + 1)}
+        >
+          Siguiente
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function BackToTop() {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setVisible(window.scrollY > 480);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  if (!visible) return null;
+  return (
+    <button
+      type="button"
+      aria-label="Volver arriba"
+      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+      className="fixed bottom-4 right-4 z-40 rounded-full bg-[var(--color-cj-lime)] px-4 py-3 text-sm font-semibold text-[#171A20] shadow-lg sm:bottom-6 sm:right-6"
+    >
+      ↑ Arriba
+    </button>
+  );
+}
+
+function splitDescriptionImages(html: string): { textHtml: string; images: string[] } {
+  const images: string[] = [];
+  const textHtml = html.replace(/<img\b[^>]*>/gi, (tag) => {
+    const src = tag.match(/\ssrc=["']([^"']+)["']/i)?.[1];
+    if (src && /^https?:\/\//i.test(src) && !images.includes(src)) images.push(src);
+    return "";
+  });
+  return { textHtml, images };
 }
 
 function VariantFacts({
@@ -342,30 +464,30 @@ function VariantFacts({
       : null;
 
   return (
-    <div className="rounded-2xl border border-dashed border-[var(--color-cj-border)] bg-black/20 p-4 text-sm">
-      <p className="font-medium text-slate-200">
+    <div className="rounded-2xl border border-[var(--color-cj-border)] bg-[var(--color-cj-chip)] p-4 text-sm">
+      <p className="font-medium text-[var(--color-cj-text)]">
         {variant.variantNameEn ?? variant.variantKey}
       </p>
-      <dl className="mt-3 grid gap-2 text-xs text-slate-400 sm:grid-cols-2">
+      <dl className="mt-3 grid gap-2 text-xs text-[var(--color-cj-text)] sm:grid-cols-2">
         <div>
-          <dt className="text-slate-600">SKU variante</dt>
-          <dd className="font-mono text-slate-300">{variant.variantSku}</dd>
+          <dt className="text-[var(--color-cj-faint)]">SKU variante</dt>
+          <dd className="font-mono text-[var(--color-cj-text)]">{variant.variantSku}</dd>
         </div>
         {variant.barcode && (
           <div>
-            <dt className="text-slate-600">Barcode</dt>
+            <dt className="text-[var(--color-cj-faint)]">Barcode</dt>
             <dd className="font-mono">{variant.barcode}</dd>
           </div>
         )}
         {dims && (
           <div>
-            <dt className="text-slate-600">Dimensiones</dt>
+            <dt className="text-[var(--color-cj-faint)]">Dimensiones</dt>
             <dd>{dims}</dd>
           </div>
         )}
         {variant.variantWeight != null && (
           <div>
-            <dt className="text-slate-600">Peso</dt>
+            <dt className="text-[var(--color-cj-faint)]">Peso</dt>
             <dd>{formatWeightGrams(variant.variantWeight)}</dd>
           </div>
         )}
@@ -375,7 +497,7 @@ function VariantFacts({
           {variant.inventories.map((inv) => (
             <span
               key={inv.countryCode ?? "xx"}
-              className="rounded-lg bg-white/5 px-2 py-1 text-[11px] text-slate-300"
+              className="rounded-lg bg-[var(--color-cj-panel)] px-2 py-1 text-[11px] text-[var(--color-cj-text)]"
             >
               {inv.countryCode}: {inv.totalInventory ?? 0}
             </span>
@@ -383,7 +505,7 @@ function VariantFacts({
         </div>
       )}
       {!variant.inventories?.length && product.productSku && (
-        <p className="mt-2 text-xs text-slate-600">
+        <p className="mt-2 text-xs text-[var(--color-cj-muted)]">
           Inventario no reportado para esta variante en la respuesta.
         </p>
       )}
@@ -396,16 +518,16 @@ function SpecsGrid({ items }: { items: [string, string | null][] }) {
   if (!visible.length) return null;
   return (
     <div className="rounded-2xl border border-[var(--color-cj-border)] bg-[var(--color-cj-panel)] p-5">
-      <h2 className="mb-4 text-sm font-semibold text-slate-200">
+      <h2 className="mb-4 text-sm font-semibold text-[var(--color-cj-text)]">
         Ficha técnica
       </h2>
       <dl className="grid gap-3 sm:grid-cols-2">
         {visible.map(([label, value]) => (
-          <div key={label} className="rounded-lg bg-black/20 px-3 py-2">
-            <dt className="text-[10px] uppercase tracking-wide text-slate-600">
+          <div key={label} className="rounded-lg bg-[var(--color-cj-chip)] px-3 py-2">
+            <dt className="text-[10px] uppercase tracking-wide text-[var(--color-cj-faint)]">
               {label}
             </dt>
-            <dd className="mt-0.5 text-sm text-slate-200">{value}</dd>
+            <dd className="mt-0.5 text-sm text-[var(--color-cj-text)]">{value}</dd>
           </div>
         ))}
       </dl>
@@ -422,13 +544,22 @@ function Badge({
 }) {
   const cls =
     tone === "emerald"
-      ? "bg-emerald-500/15 text-emerald-400"
-      : "bg-white/5 text-slate-400";
+      ? "bg-[var(--color-cj-lime)] text-[#171A20]"
+      : "bg-[var(--color-cj-chip)] text-[var(--color-cj-muted)]";
   return (
     <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${cls}`}>
       {children}
     </span>
   );
+}
+
+function asUsd(value: number | string | null | undefined): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim()) {
+    const n = Number(value.replace(/[^0-9.]/g, ""));
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
 }
 
 function sumInventories(v?: CjVariant): number | null {
@@ -441,14 +572,14 @@ function sumInventories(v?: CjVariant): number | null {
 function ProductDetailSkeleton() {
   return (
     <div className="mx-auto max-w-[1280px] animate-pulse px-4 py-8">
-      <div className="mb-8 h-4 w-32 rounded bg-white/10" />
-      <div className="grid gap-10 lg:grid-cols-2">
-        <div className="aspect-square rounded-2xl bg-white/5" />
+      <div className="mb-8 h-4 w-32 rounded bg-[var(--color-cj-chip)]" />
+      <div className="grid items-start gap-8 lg:grid-cols-2">
+        <div className="aspect-square rounded-2xl bg-[var(--color-cj-chip)]" />
         <div className="space-y-4">
-          <div className="h-8 w-3/4 rounded bg-white/10" />
-          <div className="h-4 w-1/2 rounded bg-white/5" />
-          <div className="h-24 rounded-2xl bg-white/5" />
-          <div className="h-40 rounded-2xl bg-white/5" />
+          <div className="h-8 w-3/4 rounded bg-[var(--color-cj-chip)]" />
+          <div className="h-4 w-1/2 rounded bg-[var(--color-cj-chip)]" />
+          <div className="h-24 rounded-2xl bg-[var(--color-cj-chip)]" />
+          <div className="h-40 rounded-2xl bg-[var(--color-cj-chip)]" />
         </div>
       </div>
     </div>

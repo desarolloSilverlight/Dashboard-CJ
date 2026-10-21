@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { GazuMark } from "@/components/brand/gazu-mark";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuthStatus } from "@/providers/auth-status-provider";
@@ -10,6 +11,7 @@ import { useTheme, type Theme } from "@/providers/theme-provider";
 
 const nav = [
   { href: "/", label: "Catálogo" },
+  { href: "/sincronizar", label: "Sincronizar" },
   { href: "/explorer", label: "Explorador API" },
 ];
 
@@ -37,51 +39,50 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-[var(--color-cj-border)] bg-[var(--color-cj-panel)]">
-        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-4 px-4 py-3">
-          <div>
-            <Link href="/" className="text-lg font-semibold text-[var(--color-cj-text)]">
-              CJ Dashboard
-            </Link>
-            <p className="text-[11px] text-[var(--color-cj-faint)]">Next.js · Auth server-side</p>
+      <header className="border-b border-white/10 bg-[#171A20] text-[#F7F7F2]">
+        <div className="mx-auto flex max-w-[1600px] flex-col gap-3 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+          <div className="flex items-center justify-between gap-3">
+            <GazuMark />
           </div>
-          <nav className="flex gap-1">
+          <nav className="-mx-1 flex gap-1 overflow-x-auto px-1">
             {nav.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "rounded-lg px-3 py-2 text-sm font-medium transition",
+                  "shrink-0 rounded-full px-3 py-2 text-sm font-semibold transition",
                   pathname === item.href
-                    ? "bg-blue-600/15 text-[var(--color-cj-accent)]"
-                    : "text-[var(--color-cj-muted)] hover:text-[var(--color-cj-text)]",
+                    ? "bg-[var(--color-cj-lime)] text-[#171A20]"
+                    : "text-[#F7F7F2]/75 hover:text-[#F7F7F2]",
                 )}
               >
                 {item.label}
               </Link>
             ))}
           </nav>
-          <div className="flex flex-1 flex-wrap items-center justify-end gap-2 text-xs">
+          <div className="flex w-full flex-wrap items-center gap-2 text-xs sm:ml-auto sm:w-auto sm:justify-end">
             <ThemeSwitch theme={theme} onChange={setTheme} />
             {!configured ? (
-              <span className="text-amber-400">
+              <span className="text-[var(--color-cj-coral)]">
                 Configura CJ_API_KEY en .env.local
               </span>
             ) : (
               <>
                 {email && (
-                  <span className="hidden text-[var(--color-cj-faint)] sm:inline">{email}</span>
+                  <span className="hidden max-w-40 truncate text-[#F7F7F2]/55 lg:inline">{email}</span>
                 )}
-                <span
-                  className={cn(hasToken ? "text-emerald-400" : "text-amber-400")}
-                >
+                <span className={cn(hasToken ? "text-[#F7F7F2]" : "text-[var(--color-cj-coral)]")}>
                   {hasToken ? "Token activo" : "Sin token"}
                   {accessTokenExpiryDate && (
-                    <> · vence {formatExpiry(accessTokenExpiryDate)}</>
+                    <span className="hidden md:inline">
+                      {" "}
+                      · vence {formatExpiry(accessTokenExpiryDate)}
+                    </span>
                   )}
                 </span>
                 <Button
                   variant="secondary"
+                  className="px-3 py-1.5 text-xs"
                   disabled={loading}
                   onClick={() => refreshToken()}
                 >
@@ -89,7 +90,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                 </Button>
               </>
             )}
-            {error && <span className="text-red-400">{error}</span>}
+            {error && <span className="text-[var(--color-cj-coral)]">{error}</span>}
           </div>
         </div>
       </header>
@@ -107,7 +108,7 @@ function ThemeSwitch({
 }) {
   return (
     <div
-      className="flex rounded-lg border border-[var(--color-cj-border)] bg-[var(--color-cj-bg)] p-0.5"
+      className="flex rounded-lg border border-white/15 bg-white/5 p-0.5"
       role="group"
       aria-label="Tema"
     >
@@ -141,8 +142,8 @@ function ThemeOption({
       className={cn(
         "rounded-md px-2.5 py-1 text-[11px] font-medium transition",
         active
-          ? "bg-blue-600 text-white"
-          : "text-[var(--color-cj-muted)] hover:text-[var(--color-cj-text)]",
+          ? "bg-[var(--color-cj-lime)] text-[#171A20]"
+          : "text-[#F7F7F2]/70 hover:text-[#F7F7F2]",
       )}
     >
       {children}

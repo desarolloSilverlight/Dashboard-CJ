@@ -45,6 +45,16 @@ function lowestPriceRaw(a?: string, b?: string): string | undefined {
   return bn < an ? b : a;
 }
 
+export function unitPriceUsd(product: CjProductListItem): number | null {
+  const sellValues = priceNumbers(product.sellPrice);
+  const sellMin = sellValues.length ? Math.min(...sellValues) : undefined;
+  const dealMin = priceNumbers(lowestPriceRaw(product.nowPrice, product.discountPrice))[0];
+  if (sellMin != null && dealMin != null && dealMin + 0.009 < sellMin) return dealMin;
+  if (sellMin != null) return sellMin;
+  if (dealMin != null) return dealMin;
+  return null;
+}
+
 export function storePrice(product: CjProductListItem): StorePrice {
   const sellValues = priceNumbers(product.sellPrice);
   const sellMin = sellValues.length ? Math.min(...sellValues) : undefined;

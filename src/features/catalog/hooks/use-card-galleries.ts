@@ -3,17 +3,38 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CjProductDetail, CjProductListItem } from "@/core/products/types";
 import { cjPublicGet, usesPublicCjKey } from "@/infrastructure/http/cj-public";
+import { readBrowserCache, writeBrowserCache } from "../lib/browser-cache";
 import { toCardGallery, type CardGallery } from "../lib/card-gallery";
 
 export type GalleryStatus = "pending" | "loading" | "ready" | "error";
 
 const BATCH_SIZE = 5;
 
+const GALLERY_KEY = "gazu:galleries";
+
 type BatchResponse = {
   ok?: boolean;
   data?: CardGallery[];
+  details?: CjProductDetail[];
   message?: string;
 };
+
+function storedGalleries(): Record<string, CardGallery> {
+  return readBrowserCache<Record<string, CardGallery>>(GALLERY_KEY) ?? {};
+}
+
+function rememberGallery(row: CardGallery) {
+  if (!row.pid) return;
+  const next = storedGalleries();
+  next[row.pid] = row;
+  writeBrowserCache(GALLERY_KEY, next);
+}
+
+function rememberDetail(detail: CjProductDetail) {
+  const pid = detail.pid;
+  if (!pid) return;
+  writeBrowserCache(`gazu:detail:${pid}`, detail);
+}
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -39,12 +60,23 @@ export function useCardGalleries(
   useEffect(() => {
     const ids = idsKey.split("\n").filter(Boolean);
     visibleRef.current = new Set();
-    setGalleries({});
-    setStatus(Object.fromEntries(ids.map((id) => [id, "pending" as const])));
+    const saved = storedGalleries();
+    const known: Record<string, CardGallery> = {};
+    const statusSeed: Record<string, GalleryStatus> = {};
+    for (const id of ids) {
+      if (saved[id]) {
+        known[id] = saved[id];
+        statusSeed[id] = "ready";
+      } else {
+        statusSeed[id] = "pending";
+      }
+    }
+    setGalleries(known);
+    setStatus(statusSeed);
     if (!ids.length) return;
 
     let cancelled = false;
-    const finished = new Set<string>();
+    const finished = new Set<string>(Object.keys(known));
     const controller = new AbortController();
 
     const nextBatch = () => {
@@ -84,7 +116,10 @@ export function useCardGalleries(
                 features: ["enable_video", "enable_combine"],
               });
               if (detail.code === 200 && detail.data) {
-                rows.push(toCardGallery(detail.data, pid));
+                rememberDetail(detail.data);
+                const gallery = toCardGallery(detail.data, pid);
+                rememberGallery(gallery);
+                rows.push(gallery);
               }
             }
           } else {
@@ -97,7 +132,9 @@ export function useCardGalleries(
             const body = (await res.json()) as BatchResponse;
             if (!res.ok) throw new Error(body.message ?? "No se pudo cargar el lote");
             rows = body.data ?? [];
+            for (const detail of body.details ?? []) rememberDetail(detail);
           }
+          for (const row of rows) rememberGallery(row);
           const byId = new Map(rows.filter((row) => row.pid).map((row) => [row.pid, row]));
           if (!cancelled) {
             setGalleries((prev) => {

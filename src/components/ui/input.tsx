@@ -8,7 +8,7 @@ export function Input({
   return (
     <input
       className={cn(
-        "w-full rounded-lg border border-[var(--color-cj-border)] bg-[var(--color-cj-bg)] px-3 py-2 text-sm outline-none focus:border-blue-500",
+        "w-full rounded-lg border border-[var(--color-cj-border)] bg-[var(--color-cj-bg)] px-3 py-2 text-sm outline-none focus:border-[var(--color-cj-carbon)]",
         className,
       )}
       {...props}
