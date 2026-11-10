@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
       } else {
         results.push(row.data);
       }
-    } else errors.push({ pid, ...cjBody });
+    } else errors.push({ pid, ...row });
 
     if (i < pids.length - 1 && CJ_BATCH_DELAY_MS > 0) {
       await new Promise((r) => setTimeout(r, CJ_BATCH_DELAY_MS));
