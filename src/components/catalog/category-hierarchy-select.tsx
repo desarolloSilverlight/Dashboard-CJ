@@ -40,7 +40,7 @@ export function CategoryHierarchySelect({
           onChange={(e) => onParentChange(e.target.value)}
           className="select-field"
         >
-          <option value="">Selecciona…</option>
+          <option value="">Seleccionar…</option>
           {categories.map((l1) => {
             const key = parentKeyFromName(l1.categoryFirstName);
             return (
